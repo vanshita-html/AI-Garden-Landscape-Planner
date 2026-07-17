@@ -18,7 +18,15 @@ from __future__ import annotations
 import io
 
 import streamlit as st
-from dotenv import load_dotenv
+
+# python-dotenv is only needed for local development (loading a .env file).
+# On Streamlit Cloud, secrets come from st.secrets instead, so we don't want
+# a missing/stale dotenv install to crash the whole app.
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    def load_dotenv(*args, **kwargs):  # type: ignore[no-redef]
+        return False
 
 from config import (
     COLOR_THEMES,
