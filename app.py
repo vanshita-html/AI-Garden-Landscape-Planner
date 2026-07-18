@@ -85,35 +85,50 @@ CSS = textwrap.dedent(
     [data-testid="stHeader"] { background: transparent; }
     .block-container { padding-top: 2.75rem; padding-bottom: 3rem; max-width: 720px; }
 
-    .gp-eyebrow {
+    /* Streamlit applies its own default rules to <p> tags rendered inside
+       stMarkdown containers, and those rules carry higher specificity than
+       a bare class selector — which is why font-size wasn't sticking
+       before. Scoping every rule under #gp-header and using !important on
+       the properties that matter guarantees they win. */
+    #gp-header {
+      margin-bottom: 2.5rem;
+      padding-bottom: 2.1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    #gp-header .gp-eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
       background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 0.72rem;
-      font-weight: 600;
+      color: var(--accent) !important;
+      font-size: 0.72rem !important;
+      font-weight: 600 !important;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      padding: 0.3rem 0.7rem;
+      padding: 0.35rem 0.75rem;
       border-radius: 999px;
-      margin-bottom: 1rem;
+      margin: 0 0 1.25rem;
     }
-    .gp-title {
-      font-family: 'Sora', sans-serif;
-      font-weight: 700;
-      font-size: 2.25rem;
-      color: var(--ink);
-      letter-spacing: -0.02em;
-      line-height: 1.15;
-      margin: 0;
+    #gp-header .gp-title {
+      font-family: 'Sora', sans-serif !important;
+      font-weight: 700 !important;
+      font-size: 3rem !important;
+      color: var(--ink) !important;
+      letter-spacing: -0.03em !important;
+      line-height: 1.08 !important;
+      margin: 0 0 0.9rem !important;
     }
-    .gp-tagline {
-      color: var(--ink-soft);
-      font-size: 1.02rem;
-      line-height: 1.55;
-      max-width: 50ch;
-      margin: 0.75rem 0 2.25rem;
+    #gp-header .gp-title-accent { color: var(--accent) !important; }
+    #gp-header .gp-tagline {
+      font-family: 'Inter', sans-serif !important;
+      color: var(--ink-soft) !important;
+      font-size: 1.1rem !important;
+      line-height: 1.6 !important;
+      max-width: 52ch;
+      margin: 0 !important;
+    }
+    @media (max-width: 480px) {
+      #gp-header .gp-title { font-size: 2.15rem !important; }
     }
 
     [data-testid="stForm"] {
@@ -234,12 +249,14 @@ CSS = textwrap.dedent(
 
 HEADER_HTML = textwrap.dedent(
     """
+    <div id="gp-header">
     <span class="gp-eyebrow">🌱 AI Design Studio</span>
-    <p class="gp-title">Garden &amp; Landscape Planner</p>
+    <h1 class="gp-title">Garden &amp; <span class="gp-title-accent">Landscape</span> Planner</h1>
     <p class="gp-tagline">
     Choose a few details about your space, and an AI landscape designer
     writes the concept while an AI artist renders it.
     </p>
+    </div>
     """
 ).strip()
 
