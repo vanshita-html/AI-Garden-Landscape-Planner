@@ -3,14 +3,18 @@ app.py
 ------
 Streamlit front-end for the Garden & Landscape Planner.
 
+Layout: a two-column "studio" view — the form lives in the left column,
+the generated image (or a placeholder) lives in the right column, similar
+to typical AI image-generation tools.
+
 Flow:
   1. User picks plot size, garden style, plant type, season, color theme,
      and (optionally) which image model to render with.
   2. On submit, Groq (llama-3.3-70b-versatile) turns those choices into a
      rich photorealistic image-generation prompt.
   3. Hugging Face Inference Providers renders that prompt into an image.
-  4. The image (and the prompt used) are shown in a result panel, with a
-     download button for the image.
+  4. The image (and the prompt used) are shown in the right-hand panel,
+     with a download button.
 
 All styling lives in this file (a single injected <style> block) so the
 app is self-contained.
@@ -48,38 +52,35 @@ load_dotenv()  # no-op in production/Streamlit Cloud, convenient for local dev
 st.set_page_config(
     page_title="Garden & Landscape Planner",
     page_icon="🌿",
-    layout="centered",
+    layout="wide",
 )
 
 # ---------------------------------------------------------------------------
-# Theme
+# Theme: white background, near-black text, a single green accent used in a
+# light tint (badges, hover fills) and a rich/dark shade (buttons, borders).
+# Every multi-line HTML string below is passed through textwrap.dedent()
+# .strip() before rendering — Markdown treats 4-space indented text as a
+# preformatted code block, which is what caused raw tags to show up
+# literally in an earlier version of this file.
 # ---------------------------------------------------------------------------
-# A clean, modern SaaS-style theme: neutral cool-gray surface, a single
-# confident green accent, Sora for headings paired with Inter for UI/body
-# text. Every multi-line HTML string below is passed through
-# textwrap.dedent().strip() before rendering — Markdown treats 4-space
-# indented text as a preformatted code block, which is what caused the
-# raw tags to show up literally in the previous version.
 CSS = textwrap.dedent(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap');
 
     :root {
-      --bg: #F5F6F8;
+      --bg: #FFFFFF;
       --surface: #FFFFFF;
-      --border: #E4E7EC;
-      --ink: #111827;
-      --ink-soft: #667085;
+      --field-bg: #FFFFFF;
+      --border: #E5E7EB;
+      --ink: #111111;
+      --ink-soft: #6B7280;
       --green: #16A34A;
-      --teal: #0D9488;
-      --gold: #F59E0B;
-      --accent-soft: #E7F4EC;
-      --focus: #F59E0B;
-      --hero-deep: #0B1F14;
-      --hero-mid: #123324;
-      --hero-glow-1: #F59E0B;
-      --hero-glow-2: #2DD4BF;
+      --green-dark: #0F7B3D;
+      --green-deep: #0B5C2D;
+      --green-light: #DCFCE7;
+      --green-mid: #22C55E;
+      --focus: #16A34A;
     }
 
     html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
@@ -88,200 +89,172 @@ CSS = textwrap.dedent(
     * { font-family: 'Inter', -apple-system, sans-serif; }
 
     [data-testid="stHeader"] { background: transparent; }
-    .block-container { padding-top: 2.25rem; padding-bottom: 3rem; max-width: 720px; }
+    .block-container { padding-top: 2.5rem; padding-bottom: 3rem; max-width: 1180px; }
 
-    /* ---------- Hero header: dark, gradient, glowing ---------- */
-    #gp-header {
-      position: relative;
-      overflow: hidden;
-      background: radial-gradient(120% 150% at 12% -10%, var(--hero-mid) 0%, var(--hero-deep) 60%);
-      border-radius: 26px;
-      padding: 2.75rem 2.5rem;
-      margin-bottom: 2rem;
-      box-shadow: 0 24px 48px -22px rgba(11,31,20,0.55);
+    /* ---------- Header (full width, above the two columns) ---------- */
+    #gp-header { margin-bottom: 2.25rem; }
+    #gp-header .gp-titlebar {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 0.6rem;
     }
-    #gp-header::before,
-    #gp-header::after {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(18px);
-      z-index: 0;
+    #gp-header .gp-logo {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--green-mid), var(--green-deep));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
     }
-    #gp-header::before {
-      width: 260px; height: 260px;
-      background: radial-gradient(circle, rgba(245,158,11,0.35), transparent 70%);
-      top: -100px; right: -70px;
+    #gp-header .gp-title {
+      font-family: 'Sora', sans-serif !important;
+      font-weight: 700 !important;
+      font-size: 2.1rem !important;
+      color: var(--green) !important;
+      letter-spacing: -0.02em !important;
+      margin: 0 !important;
+      line-height: 1.1 !important;
     }
-    #gp-header::after {
-      width: 240px; height: 240px;
-      background: radial-gradient(circle, rgba(45,212,191,0.30), transparent 70%);
-      bottom: -110px; left: 8%;
+    #gp-header .gp-tagline {
+      font-family: 'Inter', sans-serif !important;
+      color: var(--ink-soft) !important;
+      font-size: 1rem !important;
+      margin: 0 !important;
     }
-    #gp-header .gp-eyebrow {
-      position: relative; z-index: 1;
+    #gp-header .gp-tagline strong { color: var(--ink) !important; font-weight: 600 !important; }
+    #gp-header .gp-tagline .gp-dot { color: var(--green); margin: 0 0.5rem; }
+
+    /* ---------- Left column: form ---------- */
+    .gp-badge {
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: linear-gradient(135deg, var(--hero-glow-1), #FDE68A);
-      color: var(--hero-deep) !important;
-      font-size: 0.72rem !important;
-      font-weight: 700 !important;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      background: var(--green-light);
+      color: var(--green-deep);
+      font-size: 0.78rem;
+      font-weight: 600;
       padding: 0.35rem 0.75rem;
       border-radius: 999px;
-      margin: 0 0 1.25rem;
+      margin-bottom: 0.9rem;
     }
-    #gp-header .gp-title {
-      position: relative; z-index: 1;
-      font-family: 'Sora', sans-serif !important;
-      font-weight: 700 !important;
-      font-size: 3rem !important;
-      color: #F5F7F2 !important;
-      letter-spacing: -0.03em !important;
-      line-height: 1.08 !important;
-      margin: 0 0 0.9rem !important;
-    }
-    #gp-header .gp-title-accent {
-      background: linear-gradient(135deg, #4ADE80, #FDE68A) !important;
-      -webkit-background-clip: text !important;
-      background-clip: text !important;
-      color: transparent !important;
-    }
-    #gp-header .gp-tagline {
-      position: relative; z-index: 1;
-      font-family: 'Inter', sans-serif !important;
-      color: rgba(245,247,242,0.75) !important;
-      font-size: 1.1rem !important;
-      line-height: 1.6 !important;
-      max-width: 52ch;
-      margin: 0 !important;
-    }
-    @media (max-width: 480px) {
-      #gp-header .gp-title { font-size: 2.15rem !important; }
-    }
-
-    /* ---------- Form card ---------- */
     [data-testid="stForm"] {
-      position: relative;
-      overflow: hidden;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2.25rem 2.1rem 1.6rem;
-      box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px -12px rgba(16,24,40,0.10);
-    }
-    [data-testid="stForm"]::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 5px;
-      background: linear-gradient(90deg, var(--green), var(--teal), var(--gold));
+      border-radius: 16px;
+      padding: 1.75rem 1.6rem;
+      box-shadow: 0 1px 2px rgba(17,17,17,0.03), 0 6px 18px -12px rgba(17,17,17,0.10);
     }
     [data-testid="stForm"] label p {
       font-family: 'Inter', sans-serif;
       font-size: 0.72rem;
       font-weight: 600;
-      letter-spacing: 0.07em;
+      letter-spacing: 0.06em;
       text-transform: uppercase;
       color: var(--ink-soft);
     }
     [data-testid="stForm"] [data-baseweb="select"] > div {
-      background: var(--bg);
+      background: var(--field-bg);
       border-radius: 10px;
       border: 1px solid var(--border);
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
-    [data-testid="stForm"] [data-baseweb="select"] > div:hover {
-      border-color: var(--teal);
-    }
-    /* Two-tone focus color: left column glows green, right column glows teal */
-    [data-testid="stForm"] [data-testid="stColumn"]:nth-of-type(1) [data-baseweb="select"] > div:focus-within,
-    [data-testid="stForm"] [data-testid="column"]:nth-of-type(1) [data-baseweb="select"] > div:focus-within {
+    [data-testid="stForm"] [data-baseweb="select"] span { color: var(--ink) !important; }
+    [data-testid="stForm"] [data-baseweb="select"] > div:hover { border-color: var(--green); }
+    [data-testid="stForm"] [data-baseweb="select"] > div:focus-within {
       border-color: var(--green);
-      box-shadow: 0 0 0 3px rgba(22,163,74,0.18);
-    }
-    [data-testid="stForm"] [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] > div:focus-within,
-    [data-testid="stForm"] [data-testid="column"]:nth-of-type(2) [data-baseweb="select"] > div:focus-within {
-      border-color: var(--teal);
-      box-shadow: 0 0 0 3px rgba(13,148,136,0.18);
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.16);
     }
 
     [data-testid="stExpander"] {
       border: 1px solid var(--border);
-      border-left: 4px solid var(--gold);
-      border-radius: 16px;
+      border-radius: 14px;
       background: var(--surface);
       overflow: hidden;
-      box-shadow: 0 1px 2px rgba(16,24,40,0.04);
+      margin-top: 1rem;
     }
-    [data-testid="stExpander"] summary {
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-      color: var(--ink);
-    }
+    [data-testid="stExpander"] summary { font-weight: 600; color: var(--ink); }
     [data-testid="stExpander"] p { color: var(--ink-soft); line-height: 1.6; }
 
     .stFormSubmitButton > button {
-      background: linear-gradient(135deg, var(--green), var(--teal));
+      background: var(--green);
       color: #FFFFFF !important;
       border: none;
       border-radius: 12px;
-      padding: 0.75rem 1.4rem;
+      padding: 0.85rem 1.4rem;
       font-family: 'Sora', sans-serif;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 1.02rem;
       letter-spacing: 0.01em;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
-      box-shadow: 0 10px 24px -10px rgba(13,148,136,0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      box-shadow: 0 10px 22px -10px rgba(22,163,74,0.55);
     }
     .stFormSubmitButton > button:hover {
-      filter: brightness(1.08);
+      background: var(--green-dark);
       transform: translateY(-1px);
-      box-shadow: 0 14px 28px -10px rgba(13,148,136,0.6);
+      box-shadow: 0 14px 26px -10px rgba(22,163,74,0.6);
       color: #FFFFFF !important;
     }
+    .stFormSubmitButton > button:focus-visible {
+      outline: 3px solid var(--green-mid);
+      outline-offset: 2px;
+    }
+
+    /* ---------- Right column: result panel ---------- */
+    .gp-result-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .gp-placeholder {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      background: var(--green-light);
+      color: var(--green-deep);
+      text-align: center;
+      padding: 2rem;
+      border-radius: 16px;
+      min-height: 480px;
+    }
+    .gp-placeholder .gp-placeholder-icon { font-size: 2.4rem; }
+    .gp-placeholder p {
+      color: var(--green-deep) !important;
+      font-size: 0.98rem;
+      max-width: 32ch;
+      margin: 0 !important;
+    }
+    .gp-result-title {
+      font-family: 'Sora', sans-serif;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--ink);
+      margin: 0 0 0.75rem !important;
+    }
+    [data-testid="stImage"] img { border-radius: 12px; }
 
     .stDownloadButton > button {
-      background: var(--surface);
-      color: var(--teal) !important;
-      border: 1.5px solid var(--teal);
+      background: #FFFFFF;
+      color: var(--green) !important;
+      border: 1.5px solid var(--green);
       border-radius: 12px;
-      padding: 0.7rem 1.4rem;
+      padding: 0.65rem 1.4rem;
       font-family: 'Sora', sans-serif;
       font-weight: 600;
       transition: background 0.15s ease, transform 0.15s ease;
     }
-    .stDownloadButton > button:hover {
-      background: var(--accent-soft);
-      transform: translateY(-1px);
-    }
-
-    .stFormSubmitButton > button:focus-visible,
+    .stDownloadButton > button:hover { background: var(--green-light); transform: translateY(-1px); }
     .stDownloadButton > button:focus-visible {
-      outline: 3px solid var(--focus);
+      outline: 3px solid var(--green-mid);
       outline-offset: 2px;
     }
-
-    [data-testid="stVerticalBlockBorderWrapper"] {
-      position: relative;
-      overflow: hidden;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px -12px rgba(16,24,40,0.10);
-    }
-    [data-testid="stVerticalBlockBorderWrapper"]::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 5px;
-      background: linear-gradient(90deg, var(--gold), var(--green), var(--teal));
-    }
-    .gp-result-title {
-      font-family: 'Sora', sans-serif;
-      font-weight: 600;
-      font-size: 1.35rem;
-      color: var(--ink);
-      margin: 0.1rem 0 0.9rem;
-    }
-    [data-testid="stImage"] img { border-radius: 12px; }
 
     @media (prefers-reduced-motion: no-preference) {
       .gp-fade-in { animation: gpFadeIn 0.5s ease both; }
@@ -304,11 +277,12 @@ CSS = textwrap.dedent(
 HEADER_HTML = textwrap.dedent(
     """
     <div id="gp-header">
-    <span class="gp-eyebrow">🌱 AI Design Studio</span>
-    <h1 class="gp-title">Garden &amp; <span class="gp-title-accent">Landscape</span> Planner</h1>
+    <div class="gp-titlebar">
+    <div class="gp-logo">🌿</div>
+    <h1 class="gp-title">Garden &amp; Landscape Planner</h1>
+    </div>
     <p class="gp-tagline">
-    Choose a few details about your space, and an AI landscape designer
-    writes the concept while an AI artist renders it.
+    <strong>AI-powered garden design</strong><span class="gp-dot">•</span>Photorealistic renders from a few dropdowns
     </p>
     </div>
     """
@@ -323,6 +297,15 @@ FOOTER_HTML = textwrap.dedent(
     """
 ).strip()
 
+PLACEHOLDER_HTML = textwrap.dedent(
+    """
+    <div class="gp-placeholder">
+    <div class="gp-placeholder-icon">🖼️</div>
+    <p>Your photorealistic garden design will appear here once you generate it.</p>
+    </div>
+    """
+).strip()
+
 st.markdown(CSS, unsafe_allow_html=True)
 st.markdown(HEADER_HTML, unsafe_allow_html=True)
 
@@ -331,27 +314,36 @@ if "result_image" not in st.session_state:
 if "result_prompt" not in st.session_state:
     st.session_state.result_prompt = None
 
+left_col, right_col = st.columns([1, 1.15], gap="large")
+
 # ---------------------------------------------------------------------------
-# Form
+# Left column: form
 # ---------------------------------------------------------------------------
-with st.form("garden_form"):
-    col1, col2 = st.columns(2)
+with left_col:
+    st.markdown('<span class="gp-badge">🌱 Design options</span>', unsafe_allow_html=True)
 
-    with col1:
-        plot_size_label = st.selectbox("📐 Plot size", options=list(PLOT_SIZES.keys()))
-        garden_style = st.selectbox("🎌 Garden style", options=GARDEN_STYLES)
-        plant_type = st.selectbox("🌸 Dominant plant type", options=PLANT_TYPES)
+    with st.form("garden_form"):
+        col1, col2 = st.columns(2)
 
-    with col2:
-        season = st.selectbox("☀️ Season", options=SEASONS)
-        color_theme = st.selectbox("🎨 Color theme", options=COLOR_THEMES)
-        image_model = st.selectbox(
-            "🖼️ Image model",
-            options=HF_IMAGE_MODEL_OPTIONS,
-            help="Advanced: choose which model renders the final image.",
-        )
+        with col1:
+            plot_size_label = st.selectbox("📐 Plot size", options=list(PLOT_SIZES.keys()))
+            garden_style = st.selectbox("🎌 Garden style", options=GARDEN_STYLES)
+            plant_type = st.selectbox("🌸 Dominant plant type", options=PLANT_TYPES)
 
-    submitted = st.form_submit_button("Generate garden design", use_container_width=True)
+        with col2:
+            season = st.selectbox("☀️ Season", options=SEASONS)
+            color_theme = st.selectbox("🎨 Color theme", options=COLOR_THEMES)
+            image_model = st.selectbox(
+                "🖼️ Image model",
+                options=HF_IMAGE_MODEL_OPTIONS,
+                help="Advanced: choose which model renders the final image.",
+            )
+
+        submitted = st.form_submit_button("Generate garden design", use_container_width=True)
+
+    if st.session_state.result_prompt:
+        with st.expander("Design concept (AI-generated prompt)", expanded=False):
+            st.write(st.session_state.result_prompt)
 
 # ---------------------------------------------------------------------------
 # Generation flow
@@ -362,39 +354,34 @@ if submitted:
 
     plot_size_desc = PLOT_SIZES[plot_size_label]
 
-    with st.spinner("Sketching the design concept..."):
-        try:
-            prompt = build_garden_prompt(
-                plot_size_desc=plot_size_desc,
-                garden_style=garden_style,
-                plant_type=plant_type,
-                season=season,
-                color_theme=color_theme,
-            )
-        except PromptBuilderError as exc:
-            st.error(f"Couldn't build the design prompt: {exc}")
-            prompt = None
-
-    if prompt:
-        st.session_state.result_prompt = prompt
-        with st.spinner("Rendering a photorealistic preview..."):
+    with right_col:
+        with st.spinner("Sketching the design concept..."):
             try:
-                image = generate_garden_image(prompt, model=image_model)
-                st.session_state.result_image = image
-            except ImageGeneratorError as exc:
-                st.error(f"Couldn't generate the image: {exc}")
+                prompt = build_garden_prompt(
+                    plot_size_desc=plot_size_desc,
+                    garden_style=garden_style,
+                    plant_type=plant_type,
+                    season=season,
+                    color_theme=color_theme,
+                )
+            except PromptBuilderError as exc:
+                st.error(f"Couldn't build the design prompt: {exc}")
+                prompt = None
+
+        if prompt:
+            st.session_state.result_prompt = prompt
+            with st.spinner("Rendering a photorealistic preview..."):
+                try:
+                    image = generate_garden_image(prompt, model=image_model)
+                    st.session_state.result_image = image
+                except ImageGeneratorError as exc:
+                    st.error(f"Couldn't generate the image: {exc}")
 
 # ---------------------------------------------------------------------------
-# Result panel
+# Right column: result panel
 # ---------------------------------------------------------------------------
-if st.session_state.result_prompt:
-    st.write("")
-    with st.expander("Design concept (AI-generated prompt)", expanded=False):
-        st.write(st.session_state.result_prompt)
-
-if st.session_state.result_image:
-    st.write("")
-    with st.container(border=True):
+with right_col:
+    if st.session_state.result_image:
         st.markdown('<div class="gp-fade-in">', unsafe_allow_html=True)
         st.markdown('<p class="gp-result-title">Your garden design</p>', unsafe_allow_html=True)
         st.image(st.session_state.result_image, use_container_width=True)
@@ -410,5 +397,7 @@ if st.session_state.result_image:
             use_container_width=True,
         )
         st.markdown("</div>", unsafe_allow_html=True)
+    elif not submitted:
+        st.markdown(PLACEHOLDER_HTML, unsafe_allow_html=True)
 
 st.markdown(FOOTER_HTML, unsafe_allow_html=True)
