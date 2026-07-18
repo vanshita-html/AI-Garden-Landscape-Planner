@@ -1,11 +1,11 @@
 """
 app.py
 ------
-Streamlit front-end for the AI Garden / Landscape Planner.
+Streamlit front-end for the Garden & Landscape Planner.
 
 Flow:
-  1. User picks plot size, garden style, plant type, season, color theme
-     (and optionally which HF image model to use).
+  1. User picks plot size, garden style, plant type, season, color theme,
+     and (optionally) which image model to render with.
   2. On submit, Groq (llama-3.3-70b-versatile) turns those choices into a
      rich photorealistic image-generation prompt.
   3. Hugging Face Inference Providers renders that prompt into an image.
@@ -38,22 +38,34 @@ from config import (
 )
 from image_generator import ImageGeneratorError, generate_garden_image
 from prompt_builder import PromptBuilderError, build_garden_prompt
+from styles import CSS, SPRIG_SVG
 
 load_dotenv()  # no-op in production/Streamlit Cloud, convenient for local dev
 
 st.set_page_config(
-    page_title="AI Garden & Landscape Planner",
+    page_title="Garden & Landscape Planner",
     page_icon="🌿",
     layout="centered",
 )
 
+st.markdown(CSS, unsafe_allow_html=True)
+
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-st.title("🌿 AI Garden & Landscape Planner")
-st.caption(
-    "Describe your dream garden with a few dropdowns — an AI landscape "
-    "designer writes the concept, and an AI artist renders it."
+st.markdown(
+    f"""
+    <div class="gp-header">
+        {SPRIG_SVG}
+        <p class="gp-title">Garden &amp; Landscape Planner</p>
+    </div>
+    <p class="gp-tagline">
+        Choose a few details about your space, and an AI landscape designer
+        writes the concept while an AI artist renders it.
+    </p>
+    <hr class="gp-divider" />
+    """,
+    unsafe_allow_html=True,
 )
 
 if "result_image" not in st.session_state:
@@ -76,10 +88,12 @@ with st.form("garden_form"):
         season = st.selectbox("Season", options=SEASONS)
         color_theme = st.selectbox("Color theme", options=COLOR_THEMES)
         image_model = st.selectbox(
-            "Image model (advanced)", options=HF_IMAGE_MODEL_OPTIONS
+            "Image model",
+            options=HF_IMAGE_MODEL_OPTIONS,
+            help="Advanced: choose which model renders the final image.",
         )
 
-    submitted = st.form_submit_button("🌱 Generate My Garden Design", use_container_width=True)
+    submitted = st.form_submit_button("Generate garden design", use_container_width=True)
 
 # ---------------------------------------------------------------------------
 # Generation flow
@@ -90,7 +104,7 @@ if submitted:
 
     plot_size_desc = PLOT_SIZES[plot_size_label]
 
-    with st.spinner("👩‍🎨 Our AI landscape designer is sketching the concept..."):
+    with st.spinner("Sketching the design concept..."):
         try:
             prompt = build_garden_prompt(
                 plot_size_desc=plot_size_desc,
@@ -105,7 +119,7 @@ if submitted:
 
     if prompt:
         st.session_state.result_prompt = prompt
-        with st.spinner("🎨 Rendering a photorealistic preview of your garden..."):
+        with st.spinner("Rendering a photorealistic preview..."):
             try:
                 image = generate_garden_image(prompt, model=image_model)
                 st.session_state.result_image = image
@@ -116,26 +130,35 @@ if submitted:
 # Result panel
 # ---------------------------------------------------------------------------
 if st.session_state.result_prompt:
-    with st.expander("📝 Design concept (AI-generated prompt)", expanded=False):
+    st.write("")
+    with st.expander("Design concept (AI-generated prompt)", expanded=False):
         st.write(st.session_state.result_prompt)
 
 if st.session_state.result_image:
-    st.subheader("Your Garden Design")
-    st.image(st.session_state.result_image, use_container_width=True)
+    st.write("")
+    with st.container(border=True):
+        st.markdown('<div class="gp-fade-in">', unsafe_allow_html=True)
+        st.markdown('<p class="gp-result-title">Your garden design</p>', unsafe_allow_html=True)
+        st.image(st.session_state.result_image, use_container_width=True)
 
-    buffer = io.BytesIO()
-    st.session_state.result_image.save(buffer, format="PNG")
+        buffer = io.BytesIO()
+        st.session_state.result_image.save(buffer, format="PNG")
 
-    st.download_button(
-        label="⬇️ Download image",
-        data=buffer.getvalue(),
-        file_name="garden_design.png",
-        mime="image/png",
-        use_container_width=True,
-    )
+        st.download_button(
+            label="Download image",
+            data=buffer.getvalue(),
+            file_name="garden_design.png",
+            mime="image/png",
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
-st.divider()
-st.caption(
-    "Powered by Groq (llama-3.3-70b-versatile) for design concepts and "
-    "Hugging Face Inference Providers for image generation."
+st.markdown(
+    """
+    <p class="gp-footer">
+        Powered by Groq (llama-3.3-70b-versatile) for design concepts and
+        Hugging Face Inference Providers for image generation.
+    </p>
+    """,
+    unsafe_allow_html=True,
 )
