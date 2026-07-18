@@ -63,7 +63,7 @@ st.set_page_config(
 CSS = textwrap.dedent(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
     :root {
       --bg: #F5F6F8;
@@ -71,10 +71,15 @@ CSS = textwrap.dedent(
       --border: #E4E7EC;
       --ink: #111827;
       --ink-soft: #667085;
-      --accent: #17875A;
-      --accent-hover: #136B48;
+      --green: #16A34A;
+      --teal: #0D9488;
+      --gold: #F59E0B;
       --accent-soft: #E7F4EC;
       --focus: #F59E0B;
+      --hero-deep: #0B1F14;
+      --hero-mid: #123324;
+      --hero-glow-1: #F59E0B;
+      --hero-glow-2: #2DD4BF;
     }
 
     html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
@@ -83,26 +88,45 @@ CSS = textwrap.dedent(
     * { font-family: 'Inter', -apple-system, sans-serif; }
 
     [data-testid="stHeader"] { background: transparent; }
-    .block-container { padding-top: 2.75rem; padding-bottom: 3rem; max-width: 720px; }
+    .block-container { padding-top: 2.25rem; padding-bottom: 3rem; max-width: 720px; }
 
-    /* Streamlit applies its own default rules to <p> tags rendered inside
-       stMarkdown containers, and those rules carry higher specificity than
-       a bare class selector — which is why font-size wasn't sticking
-       before. Scoping every rule under #gp-header and using !important on
-       the properties that matter guarantees they win. */
+    /* ---------- Hero header: dark, gradient, glowing ---------- */
     #gp-header {
-      margin-bottom: 2.5rem;
-      padding-bottom: 2.1rem;
-      border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      background: radial-gradient(120% 150% at 12% -10%, var(--hero-mid) 0%, var(--hero-deep) 60%);
+      border-radius: 26px;
+      padding: 2.75rem 2.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 24px 48px -22px rgba(11,31,20,0.55);
+    }
+    #gp-header::before,
+    #gp-header::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(18px);
+      z-index: 0;
+    }
+    #gp-header::before {
+      width: 260px; height: 260px;
+      background: radial-gradient(circle, rgba(245,158,11,0.35), transparent 70%);
+      top: -100px; right: -70px;
+    }
+    #gp-header::after {
+      width: 240px; height: 240px;
+      background: radial-gradient(circle, rgba(45,212,191,0.30), transparent 70%);
+      bottom: -110px; left: 8%;
     }
     #gp-header .gp-eyebrow {
+      position: relative; z-index: 1;
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      background: var(--accent-soft);
-      color: var(--accent) !important;
+      background: linear-gradient(135deg, var(--hero-glow-1), #FDE68A);
+      color: var(--hero-deep) !important;
       font-size: 0.72rem !important;
-      font-weight: 600 !important;
+      font-weight: 700 !important;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       padding: 0.35rem 0.75rem;
@@ -110,18 +134,25 @@ CSS = textwrap.dedent(
       margin: 0 0 1.25rem;
     }
     #gp-header .gp-title {
+      position: relative; z-index: 1;
       font-family: 'Sora', sans-serif !important;
       font-weight: 700 !important;
       font-size: 3rem !important;
-      color: var(--ink) !important;
+      color: #F5F7F2 !important;
       letter-spacing: -0.03em !important;
       line-height: 1.08 !important;
       margin: 0 0 0.9rem !important;
     }
-    #gp-header .gp-title-accent { color: var(--accent) !important; }
+    #gp-header .gp-title-accent {
+      background: linear-gradient(135deg, #4ADE80, #FDE68A) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      color: transparent !important;
+    }
     #gp-header .gp-tagline {
+      position: relative; z-index: 1;
       font-family: 'Inter', sans-serif !important;
-      color: var(--ink-soft) !important;
+      color: rgba(245,247,242,0.75) !important;
       font-size: 1.1rem !important;
       line-height: 1.6 !important;
       max-width: 52ch;
@@ -131,12 +162,20 @@ CSS = textwrap.dedent(
       #gp-header .gp-title { font-size: 2.15rem !important; }
     }
 
+    /* ---------- Form card ---------- */
     [data-testid="stForm"] {
+      position: relative;
+      overflow: hidden;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
-      padding: 2.1rem 2.1rem 1.6rem;
+      padding: 2.25rem 2.1rem 1.6rem;
       box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px -12px rgba(16,24,40,0.10);
+    }
+    [data-testid="stForm"]::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 5px;
+      background: linear-gradient(90deg, var(--green), var(--teal), var(--gold));
     }
     [data-testid="stForm"] label p {
       font-family: 'Inter', sans-serif;
@@ -153,15 +192,23 @@ CSS = textwrap.dedent(
       transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
     [data-testid="stForm"] [data-baseweb="select"] > div:hover {
-      border-color: var(--accent);
+      border-color: var(--teal);
     }
-    [data-testid="stForm"] [data-baseweb="select"] > div:focus-within {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(23,135,90,0.15);
+    /* Two-tone focus color: left column glows green, right column glows teal */
+    [data-testid="stForm"] [data-testid="stColumn"]:nth-of-type(1) [data-baseweb="select"] > div:focus-within,
+    [data-testid="stForm"] [data-testid="column"]:nth-of-type(1) [data-baseweb="select"] > div:focus-within {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(22,163,74,0.18);
+    }
+    [data-testid="stForm"] [data-testid="stColumn"]:nth-of-type(2) [data-baseweb="select"] > div:focus-within,
+    [data-testid="stForm"] [data-testid="column"]:nth-of-type(2) [data-baseweb="select"] > div:focus-within {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(13,148,136,0.18);
     }
 
     [data-testid="stExpander"] {
       border: 1px solid var(--border);
+      border-left: 4px solid var(--gold);
       border-radius: 16px;
       background: var(--surface);
       overflow: hidden;
@@ -175,7 +222,7 @@ CSS = textwrap.dedent(
     [data-testid="stExpander"] p { color: var(--ink-soft); line-height: 1.6; }
 
     .stFormSubmitButton > button {
-      background: var(--accent);
+      background: linear-gradient(135deg, var(--green), var(--teal));
       color: #FFFFFF !important;
       border: none;
       border-radius: 12px;
@@ -183,20 +230,20 @@ CSS = textwrap.dedent(
       font-family: 'Sora', sans-serif;
       font-weight: 600;
       letter-spacing: 0.01em;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-      box-shadow: 0 8px 18px -9px rgba(23,135,90,0.55);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+      box-shadow: 0 10px 24px -10px rgba(13,148,136,0.55);
     }
     .stFormSubmitButton > button:hover {
-      background: var(--accent-hover);
+      filter: brightness(1.08);
       transform: translateY(-1px);
-      box-shadow: 0 12px 22px -8px rgba(23,135,90,0.6);
+      box-shadow: 0 14px 28px -10px rgba(13,148,136,0.6);
       color: #FFFFFF !important;
     }
 
     .stDownloadButton > button {
       background: var(--surface);
-      color: var(--accent) !important;
-      border: 1.5px solid var(--accent);
+      color: var(--teal) !important;
+      border: 1.5px solid var(--teal);
       border-radius: 12px;
       padding: 0.7rem 1.4rem;
       font-family: 'Sora', sans-serif;
@@ -215,10 +262,17 @@ CSS = textwrap.dedent(
     }
 
     [data-testid="stVerticalBlockBorderWrapper"] {
+      position: relative;
+      overflow: hidden;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 20px;
       box-shadow: 0 1px 2px rgba(16,24,40,0.04), 0 8px 24px -12px rgba(16,24,40,0.10);
+    }
+    [data-testid="stVerticalBlockBorderWrapper"]::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 5px;
+      background: linear-gradient(90deg, var(--gold), var(--green), var(--teal));
     }
     .gp-result-title {
       font-family: 'Sora', sans-serif;
@@ -284,15 +338,15 @@ with st.form("garden_form"):
     col1, col2 = st.columns(2)
 
     with col1:
-        plot_size_label = st.selectbox("Plot size", options=list(PLOT_SIZES.keys()))
-        garden_style = st.selectbox("Garden style", options=GARDEN_STYLES)
-        plant_type = st.selectbox("Dominant plant type", options=PLANT_TYPES)
+        plot_size_label = st.selectbox("📐 Plot size", options=list(PLOT_SIZES.keys()))
+        garden_style = st.selectbox("🎌 Garden style", options=GARDEN_STYLES)
+        plant_type = st.selectbox("🌸 Dominant plant type", options=PLANT_TYPES)
 
     with col2:
-        season = st.selectbox("Season", options=SEASONS)
-        color_theme = st.selectbox("Color theme", options=COLOR_THEMES)
+        season = st.selectbox("☀️ Season", options=SEASONS)
+        color_theme = st.selectbox("🎨 Color theme", options=COLOR_THEMES)
         image_model = st.selectbox(
-            "Image model",
+            "🖼️ Image model",
             options=HF_IMAGE_MODEL_OPTIONS,
             help="Advanced: choose which model renders the final image.",
         )
