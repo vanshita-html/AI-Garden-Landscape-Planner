@@ -103,4 +103,4 @@ garden-planner/
   and supports text-to-image.
 - **Tune the design-writing style** — edit the system prompt in
   `prompt_builder.py`.
-  # Link   - https://ai-garden-landscape-planner-v.streamlit.app/
+  Link   - https://ai-garden-landscape-planner-v.streamlit.app/
